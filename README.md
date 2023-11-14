@@ -1,7 +1,3 @@
-Sure, I'll create a Markdown (`.md`) README template for your project on "Multiplayer scenes and avatar control using WebRTC." This template will include sections on what the project is about, what you are going to do, and references to open web technologies.
-
----
-
 # Multiplayer Scenes and Avatar Control Using WebRTC
 
 ## 1. About This Project
@@ -43,7 +39,3 @@ This project is grounded in the use of open web technologies, ensuring transpare
 - [MDN Web Docs on WebXR](https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API)
 - [Three.js Documentation](https://threejs.org/docs/)
 - [Node.js Website](https://nodejs.org/)
-
----
-
-This template provides a solid starting point for your README. You can expand each section with more specific details about your project's architecture, development process, and how you plan to integrate these technologies into Decentraland.
