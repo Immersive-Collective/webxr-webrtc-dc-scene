@@ -57,7 +57,7 @@ function addCube(size, position, rotation, wallColor, edgeColor, cast = false) {
 function addObjects() {
     addCube(2,{x:-3,y:3,z:-6},{x:0,y:0,z:0},tronLegacyColors.deepBlack,tronLegacyColors.brightOrange, true)
     addCube(2,{x:3,y:3,z:-6},{x:0,y:0,z:0},tronLegacyColors.deepBlack,tronLegacyColors.brightOrange, true )
-    addCube(2,{x:0,y:-1,z:-1},{x:0,y:0,z:0},tronLegacyColors.deepBlack,tronLegacyColors.brightBlue, false)
+    addCube(2,{x:0,y:-1,z:-1},{x:0,y:0,z:0},tronLegacyColors.deepBlack,tronLegacyColors.brightBlue, true)
 }
 
 
@@ -111,6 +111,8 @@ function restoreCameraPosition() {
         console.error('Error restoring camera position:', error);
     }
 }
+
+
 
 /* Controllers */
 
@@ -178,10 +180,6 @@ function generatePointerTexture() {
 
 
 function initControllers() {
-
-    // simpleRayGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
-    // simpleRay = new THREE.Line(simpleRayGeometry, new THREE.LineBasicMaterial({ color: 0xff0000 }));
-
 
     const rayTexture = new THREE.CanvasTexture(generateRayTexture());
     rayTexture.needsUpdate = true;
@@ -293,8 +291,9 @@ function initControllers() {
     controllers.push(controller2);
 
     controllers.forEach(controller => {
+
         const simpleRayGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -10)]);
-        const simpleRay = new THREE.Line(simpleRayGeometry, new THREE.LineBasicMaterial({ color: 0x00ff00, visible: true })); // Invisible for visual purposes
+        const simpleRay = new THREE.Line(simpleRayGeometry, new THREE.LineBasicMaterial({ color: 0xffffff, visible: true })); // Invisible for visual purposes
         controller.simpleRay = simpleRay; // Attach the simpleRay to the controller
         controller.add(simpleRay); // Add the simpleRay to the controller object
     });    
@@ -306,6 +305,19 @@ function initControllers() {
         controller.ray = ray;
         controller.point = point;
     }); 
+
+    const discRadius = 0.25;
+    const discMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide, transparent:true, opacity:0.25 });
+    const discGeometry = new THREE.CircleGeometry(discRadius, 32);
+
+    controllers.forEach(controller => {
+        const disc = new THREE.Mesh(discGeometry, discMaterial);
+        disc.visible = false; // Initially invisible
+        controller.disc = disc; // Store the disc as a property of the controller
+        scene.add(disc);
+    });
+
+
 
     dummyMatrix = new THREE.Matrix4();
     raycaster = new THREE.Raycaster();
@@ -328,7 +340,6 @@ function raycast() {
 }
 
 
-
 function updateRaycasting() {
     controllers.forEach(controller => {
         // Use the simple ray attached to the controller for raycasting
@@ -341,26 +352,43 @@ function updateRaycasting() {
         raycaster.ray.direction.copy(rayDirection);
 
         // Perform raycasting and find the closest intersection
-        const intersects = raycaster.intersectObjects(objsToTest, false);
+       const intersects = raycaster.intersectObjects(objsToTest, false);
         if (intersects.length > 0) {
             const closestIntersection = intersects.reduce((closest, intersect) => {
                 return (!closest || intersect.distance < closest.distance) ? intersect : closest;
             }, null);
 
-            // Update the pointer position based on the closest intersection
             if (closestIntersection) {
                 const intersectPoint = closestIntersection.point;
-                controller.worldToLocal(intersectPoint); // Adjust for controller's local space
+                const intersectNormal = closestIntersection.face.normal;
+
+                const disc = controller.disc;
+                
+                // Offset the disc position slightly above the intersection point
+                const offsetDistance = 0.01; // Small offset to prevent z-fighting
+                const offsetPoint = intersectPoint.clone().add(intersectNormal.multiplyScalar(offsetDistance));
+                disc.position.copy(offsetPoint);
+
+                disc.lookAt(
+                    offsetPoint.x + intersectNormal.x,
+                    offsetPoint.y + intersectNormal.y,
+                    offsetPoint.z + intersectNormal.z
+                );
+
+                disc.visible = true;
+
+                controller.worldToLocal(intersectPoint);
                 controller.point.position.copy(intersectPoint);
                 controller.point.visible = true;
             }
         } else {
+            if (controller.disc) {
+                controller.disc.visible = false;
+            }
             controller.point.visible = false;
         }
     });
 }
-
-
 
 
 
@@ -376,41 +404,29 @@ function updateRaycasting() {
 //         rayDirection.sub(raycaster.ray.origin).normalize();
 //         raycaster.ray.direction.copy(rayDirection);
 
-//         const intersects = raycaster.intersectObjects(objsToTest, true);
-
+//         // Perform raycasting and find the closest intersection
+//         const intersects = raycaster.intersectObjects(objsToTest, false);
 //         if (intersects.length > 0) {
-//             const intersectPoint = intersects[0].point;
-//             controller.worldToLocal(intersectPoint); // Adjust for controller's local space
-//             controller.point.position.copy(intersectPoint);
-//             controller.point.visible = true;
+//             const closestIntersection = intersects.reduce((closest, intersect) => {
+//                 return (!closest || intersect.distance < closest.distance) ? intersect : closest;
+//             }, null);
+
+//             // Update the pointer position based on the closest intersection
+//             if (closestIntersection) {
+//                 const intersectPoint = closestIntersection.point;
+//                 controller.worldToLocal(intersectPoint); // Adjust for controller's local space
+//                 controller.point.position.copy(intersectPoint);
+//                 controller.point.visible = true;
+//             }
 //         } else {
 //             controller.point.visible = false;
 //         }
 //     });
-
-//     // controllers.forEach(controller => {
-//     //     // Update the simple ray's position and rotation to match the controller
-//     //     simpleRay.position.copy(controller.position);
-//     //     simpleRay.rotation.copy(controller.rotation);
-
-//     //     // Set the raycaster's origin and direction based on the simple ray
-//     //     raycaster.ray.origin.copy(simpleRay.position);
-//     //     const rayDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(simpleRay.quaternion);
-//     //     raycaster.ray.direction.copy(rayDirection);
-
-//     //     // Perform raycasting
-//     //     const intersects = raycaster.intersectObjects(objsToTest, true);
-
-//     //     if (intersects.length > 0) {
-//     //         const intersectPoint = intersects[0].point;
-//     //         controller.worldToLocal(intersectPoint); // Adjust for controller's local space
-//     //         controller.point.position.copy(intersectPoint);
-//     //         controller.point.visible = true;
-//     //     } else {
-//     //         controller.point.visible = false;
-//     //     }
-//     // });
 // }
+
+
+
+
 
 
 
@@ -418,78 +434,24 @@ function render() {
 
     updateRaycasting()
 
-    // controllers.forEach(controller => {
-    //     const controllerPosition = new THREE.Vector3();
-    //     controller.getWorldPosition(controllerPosition);
-
-    //     const controllerQuaternion = new THREE.Quaternion();
-    //     controller.getWorldQuaternion(controllerQuaternion);
-
-    //     const linesHelperRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), 5 * (Math.PI / 4));
-
-    //     const rayDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(controllerQuaternion).applyQuaternion(linesHelperRotation);
-
-    //     raycaster.ray.origin.copy(controllerPosition);
-    //     raycaster.ray.direction.copy(rayDirection);
-
-    //     const intersects = raycaster.intersectObjects(objsToTest, true);
-
-    //     if (intersects.length > 0) {
-    //         const intersectPoint = intersects[0].point;
-    //         controller.worldToLocal(intersectPoint);
-    //         controller.point.position.copy(intersectPoint);
-    //         controller.point.visible = true;
-    //     } else {
-    //         controller.point.visible = false;
-    //     }
-    // });
-
-
-    // controllers.forEach(controller => {
-    //     dummyMatrix.identity().extractRotation(controller.matrixWorld);
-    //     const rayDirection = new THREE.Vector3(0, 0, -1).applyMatrix4(dummyMatrix);
-
-    //     // Adjusting ray origin based on camera's position.y
-    //     const controllerPosition = new THREE.Vector3();
-    //     controllerPosition.setFromMatrixPosition(controller.matrixWorld);
-    //     controllerPosition.y -= camera.position.y;
-
-    //     raycaster.ray.origin.copy(controllerPosition);
-    //     raycaster.ray.direction.copy(rayDirection);
-
-    //     const intersects = raycaster.intersectObjects(objsToTest, true);
-
-    //     if (intersects.length > 0) {
-    //         const intersectPoint = intersects[0].point;
-    //         controller.worldToLocal(intersectPoint); // Convert to controller's local space
-    //         controller.point.position.copy(intersectPoint);
-    //         controller.point.visible = true;
-    //     } else {
-    //         controller.point.visible = false;
-    //     }
-    // });
-
-
-    // controllers.forEach(controller => {
-    //     dummyMatrix.identity().extractRotation(controller.matrixWorld);
-    //     raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-    //     raycaster.ray.direction.set(0, 0, -1).applyMatrix4(dummyMatrix);
-
-    //     const intersects = raycaster.intersectObjects(objsToTest, true);
-
-    //     if (intersects.length > 0) {
-    //         const intersectPoint = intersects[0].point;
-    //         controller.worldToLocal(intersectPoint); // Convert to controller's local space
-    //         controller.point.position.copy(intersectPoint);
-    //         controller.point.visible = true; // Make pointer visible
-    //     } else {
-    //         controller.point.visible = false; // Hide pointer
-    //     }
-    // });
-
     renderer.render(scene, camera);
 
 }
+
+
+/* Floor */
+
+function createFloor() {
+    const geometry = new THREE.BoxGeometry(20, 0.1, 20); // Thin, flat box
+    const material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide, visible: false });
+    const floor = new THREE.Mesh(geometry, material);
+    floor.position.y = -0.05; // Adjust to align the top surface with y = 0
+    floor.name = "Floor";
+    scene.add(floor);
+    objsToTest.push(floor);
+}
+
+
 
 
 
@@ -502,6 +464,8 @@ function makeScene() {
     restoreCameraPosition()    
 
     addObjects(); 
+
+    createFloor();
 
     initControllers();
 
