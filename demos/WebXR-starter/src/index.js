@@ -34,6 +34,37 @@ const DEFAULT_CAMERA_POS =
 const DEFAULT_CONTROLS_TARGET =
     '{"x":-1.8977369150584633,"y":-27.789645896127855,"z":-51.59438146811678}';
 
+
+function createPopcorn() {
+    const popcorn = new THREE.Group();
+
+    const kernelGeometry = new THREE.SphereGeometry(0.5, 6, 6);
+    const kernelMaterial = new THREE.MeshPhongMaterial({ color: 0xffffcc });
+
+    for (let i = 0; i < 50; i++) {
+        const kernel = new THREE.Mesh(kernelGeometry, kernelMaterial);
+
+        // Randomize the size and rotation
+        const scale = 0.5 + Math.random() * 0.5;
+        kernel.scale.set(scale, scale, scale);
+        kernel.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+
+        // Randomize the position
+        kernel.position.set((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);
+
+        objsToTest.push(kernel)
+
+        popcorn.add(kernel);
+    }
+
+    //return popcorn;
+    scene.add(popcorn)
+
+
+
+}
+
+
 function addCube(size, position, rotation, wallColor, edgeColor, cast = false) {
     const geometry = new THREE.BoxGeometry(size, size, size);
     const material = new THREE.MeshBasicMaterial({ color: wallColor });
@@ -73,6 +104,9 @@ function addObjects() {
         tronLegacyColors.brightBlue,
         true,
     );
+
+
+    createPopcorn()
 }
 
 /* Controls */
@@ -188,8 +222,6 @@ function generatePointerTexture() {
     return canvas;
 }
 
-// During initialization
-// let simpleRayGeometry, simpleRay
 
 function initControllers() {
     const rayTexture = new THREE.CanvasTexture(generateRayTexture());
@@ -343,6 +375,9 @@ function initControllers() {
 
     dummyMatrix = new THREE.Matrix4();
     raycaster = new THREE.Raycaster();
+
+
+
 }
 
 function raycast() {
@@ -428,6 +463,35 @@ function render() {
     renderer.render(scene, camera);
 }
 
+
+/* WebRTC */
+
+function checkWebRTCCapabilities() {
+  const capabilities = {
+    getUserMedia: false,
+    getDisplayMedia: false,
+    RTCPeerConnection: false
+  };
+
+  if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+    capabilities.getUserMedia = true;
+  }
+
+  if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
+    capabilities.getDisplayMedia = true;
+  }
+
+  if (window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection) {
+    capabilities.RTCPeerConnection = true;
+  }
+
+  return capabilities;
+}
+
+
+
+
+
 /* Floor */
 
 function createFloor() {
@@ -444,9 +508,31 @@ function createFloor() {
     objsToTest.push(floor);
 }
 
+
+
+
+
 /* Scene */
 
+
+function initWebRTC() {
+
+    // Usage
+
+    const webrtcCapabilities = checkWebRTCCapabilities();
+
+    console.log("webrtcCapabilities", webrtcCapabilities);
+
+
+}
+
+
+
+
+
+
 function makeScene() {
+
     restoreCameraPosition();
 
     addObjects();
@@ -454,7 +540,12 @@ function makeScene() {
     createFloor();
 
     initControllers();
+
+    initWebRTC()
 }
+
+
+
 
 function init() {
     const container = document.createElement("div");
